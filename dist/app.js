@@ -12,7 +12,7 @@ const globalErrorHandler_1 = __importDefault(require("./app/middleware/globalErr
 const app = (0, express_1.default)();
 // CORS configuration
 app.use((0, cors_1.default)({
-    origin: ['http://localhost:3000', 'http://localhost:5173'], // Add your frontend URLs
+    origin: ['http://localhost:3000', 'https://hello-shop-eight.vercel.app'], // Add your frontend URLs
     credentials: true, // Allow credentials (cookies, authorization headers, etc.)
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
