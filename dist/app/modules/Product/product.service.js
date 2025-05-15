@@ -13,6 +13,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProductService = void 0;
+const http_status_1 = __importDefault(require("http-status"));
+const AppError_1 = __importDefault(require("../../errors/AppError"));
 const paginationHelper_1 = require("../../helper/paginationHelper");
 const prisma_1 = __importDefault(require("../../utils/prisma"));
 const createProduct = (req) => __awaiter(void 0, void 0, void 0, function* () {
@@ -82,6 +84,20 @@ const getAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, fun
                     phoneNumber: true,
                     address: true
                 }
+            },
+            reviews: {
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            phoneNumber: true,
+                            address: true,
+                            profilePhoto: true
+                        }
+                    }
+                }
             }
         },
         skip,
@@ -103,6 +119,7 @@ const getAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, fun
     };
 });
 const getSingleProduct = (id) => __awaiter(void 0, void 0, void 0, function* () {
+    // Fetch full product data including relations
     const result = yield prisma_1.default.product.findUnique({
         where: {
             id
@@ -110,6 +127,23 @@ const getSingleProduct = (id) => __awaiter(void 0, void 0, void 0, function* () 
         include: {
             category: true,
             brand: true,
+            reviews: {
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            profilePhoto: true,
+                            createdAt: true,
+                            updatedAt: true
+                        }
+                    },
+                    _count: {
+                        select: { like: true }
+                    }
+                }
+            },
             seller: {
                 select: {
                     id: true,
@@ -121,7 +155,14 @@ const getSingleProduct = (id) => __awaiter(void 0, void 0, void 0, function* () 
             }
         }
     });
-    return result;
+    if (!result) {
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "Product Not Found");
+    }
+    const averateRating = result.reviews.length > 0 ? parseFloat((result.reviews.reduce((acc, r) => acc + r.rating, 0) / result.reviews.length).toFixed(1)) : 0;
+    const totalReviews = result.reviews.length;
+    // Final return object
+    return Object.assign(Object.assign({}, result), { averateRating,
+        totalReviews });
 });
 const updateProduct = (req) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield prisma_1.default.product.update({

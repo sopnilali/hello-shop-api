@@ -16,7 +16,6 @@ router.post(
        req.body = BrandValidation.createBrandValidation.parse(JSON.parse(req.body.data))
         return BrandController.createBrand(req, res, next)
     }
-
 );
 
 router.get('/', BrandController.getAllBrands);

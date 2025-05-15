@@ -29,6 +29,9 @@ model User {
   updatedAt          DateTime   @updatedAt
   product            Product[]
   orders             Order[]
+  reviews            Reviews[]
+  comment            Comment[]
+  like               Like[]
 
   @@map("users")
 }
@@ -39,7 +42,7 @@ model Product {
   description String
   price       Float
   weight      Float? // Optional weight in kg
-  quantity    Int          @default(0)
+  quantity    Int           @default(0)
   images      String[]
   categoryId  String
   category    Category      @relation(fields: [categoryId], references: [id])
@@ -52,6 +55,7 @@ model Product {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   orderItems  OrderItem[]
+  reviews     Reviews[]
 
   @@map("products")
 }
@@ -111,6 +115,61 @@ model OrderItem {
   updatedAt DateTime @updatedAt
 
   @@map("order_items")
+}
+
+model Reviews {
+  id         String       @id @default(uuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id])
+  productId  String
+  product    Product      @relation(fields: [productId], references: [id])
+  reviewText String
+  rating     Float
+  status     ReviewStatus @default(PENDING)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  comment    Comment[]
+  like       Like[]
+
+  @@map("reviews")
+}
+
+model Comment {
+  id       String  @id @default(ulid())
+  reviewId String
+  review   Reviews @relation(fields: [reviewId], references: [id])
+  userId   String
+  user     User    @relation(fields: [userId], references: [id])
+
+  commentText String
+  parentId    String?
+  parent      Comment?  @relation("CommentToReplies", fields: [parentId], references: [id])
+  replies     Comment[] @relation("CommentToReplies")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Like {
+  id        String     @id @default(uuid())
+  reviewId  String
+  review    Reviews    @relation(fields: [reviewId], references: [id])
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
+  status    LikeStatus
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("likes")
+}
+
+enum LikeStatus {
+  LIKED
+  DISLIKED
+}
+
+enum ReviewStatus {
+  PUBLISHED
+  PENDING
 }
 
 enum Conditions {

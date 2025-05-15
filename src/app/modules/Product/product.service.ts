@@ -1,4 +1,6 @@
 
+import status from "http-status";
+import AppError from "../../errors/AppError";
 import { paginationHelper } from "../../helper/paginationHelper";
 import { IOptions } from "../../interface/options.type";
 import prisma from "../../utils/prisma";
@@ -51,7 +53,7 @@ const getAllProducts = async (options: IOptions = {}) => {
                 category: {
                     name: {
                         contains: searchTerm,
-                        mode: 'insensitive' 
+                        mode: 'insensitive'
                     }
                 }
             }
@@ -93,7 +95,22 @@ const getAllProducts = async (options: IOptions = {}) => {
                     phoneNumber: true,
                     address: true
                 }
+            },
+            reviews: {
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            phoneNumber: true,
+                            address: true,
+                            profilePhoto: true
+                        }
+                    }
+                }
             }
+
         },
         skip,
         take: limit,
@@ -117,6 +134,8 @@ const getAllProducts = async (options: IOptions = {}) => {
 };
 
 const getSingleProduct = async (id: string) => {
+
+    // Fetch full product data including relations
     const result = await prisma.product.findUnique({
         where: {
             id
@@ -124,6 +143,23 @@ const getSingleProduct = async (id: string) => {
         include: {
             category: true,
             brand: true,
+            reviews: {
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            profilePhoto: true,
+                            createdAt: true,
+                            updatedAt: true
+                        }
+                    },
+                    _count: {
+                        select: { like: true }
+                    }
+                }
+            },
             seller: {
                 select: {
                     id: true,
@@ -135,7 +171,23 @@ const getSingleProduct = async (id: string) => {
             }
         }
     });
-    return result;
+
+    if (!result) {
+        throw new AppError(status.NOT_FOUND, "Product Not Found")
+    }
+
+
+    const averateRating = result.reviews.length > 0 ? parseFloat( (result.reviews.reduce((acc, r)=> acc + r.rating, 0) / result.reviews.length).toFixed(1)): 0
+    
+    const totalReviews = result.reviews.length;
+
+     // Final return object
+     return {
+        ...result,
+        averateRating,
+        totalReviews
+     }
+
 };
 
 const updateProduct = async (req: any) => {
