@@ -1,0 +1,150 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String     @id @default(uuid())
+  name               String
+  email              String     @unique
+  password           String
+  phoneNumber        String?
+  profilePhoto       String?
+  address            String?
+  role               UserRole   @default(CUSTOMER)
+  needPasswordChange Boolean    @default(true)
+  status             UserStatus @default(ACTIVE)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  product            Product[]
+  orders             Order[]
+
+  @@map("users")
+}
+
+model Product {
+  id          String        @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  weight      Float? // Optional weight in kg
+  quantity    Int          @default(0)
+  images      String[]
+  categoryId  String
+  category    Category      @relation(fields: [categoryId], references: [id])
+  condition   Conditions    @default(FRESH)
+  brandId     String
+  brand       Brand         @relation(fields: [brandId], references: [id])
+  status      ProductStatus @default(AVAILABLE)
+  sellerId    String
+  seller      User          @relation(fields: [sellerId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  orderItems  OrderItem[]
+
+  @@map("products")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  description String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  product     Product[]
+
+  @@map("categories")
+}
+
+model Brand {
+  id          String    @id @default(uuid())
+  name        String
+  description String
+  logo        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  product     Product[]
+
+  @@map("brands")
+}
+
+model Order {
+  id            String        @id @default(uuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  name          String
+  email         String
+  address       String
+  city          String
+  phoneNumber   String
+  paymentMethod PaymentMethod
+  total         Float
+  transactionId String?
+  status        OrderStatus   @default(PENDING)
+  items         OrderItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("order_items")
+}
+
+enum Conditions {
+  FRESH
+  OLD
+}
+
+enum ProductStatus {
+  AVAILABLE
+  SOLD
+}
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
+  SELLER
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+}
+
+enum PaymentMethod {
+  BKASH
+  NAGAD
+  CASH_ON_DELIVERY
+  CREDIT_CARD
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
