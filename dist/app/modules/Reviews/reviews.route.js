@@ -1,0 +1,21 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ReviewsRoutes = void 0;
+const express_1 = __importDefault(require("express"));
+const auth_1 = __importDefault(require("../../middleware/auth"));
+const client_1 = require("@prisma/client");
+const reviews_validation_1 = require("./reviews.validation");
+const validateRequest_1 = __importDefault(require("../../middleware/validateRequest"));
+const reviews_controller_1 = require("./reviews.controller");
+const router = express_1.default.Router();
+router.post("/create-review", (0, auth_1.default)(client_1.UserRole.CUSTOMER, client_1.UserRole.SELLER, client_1.UserRole.ADMIN), (0, validateRequest_1.default)(reviews_validation_1.ReviewValidations.addReviewValidationSchema), reviews_controller_1.ReviewsController.addReviews);
+router.get("/", reviews_controller_1.ReviewsController.getAllReviews);
+router.get("/:productId", (0, auth_1.default)(client_1.UserRole.SELLER, client_1.UserRole.CUSTOMER, client_1.UserRole.ADMIN), reviews_controller_1.ReviewsController.getAllReviewsById);
+// router.get("/:id", ReviewsController.getSingleReviews);
+router.patch("/:id", (0, validateRequest_1.default)(reviews_validation_1.ReviewValidations.updateReviewValidationSchema), reviews_controller_1.ReviewsController.updateReview);
+router.delete("/:id", reviews_controller_1.ReviewsController.deleteReview);
+router.get('/stats', reviews_controller_1.ReviewsController.getReviewStats);
+exports.ReviewsRoutes = router;

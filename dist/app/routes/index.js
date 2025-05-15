@@ -10,6 +10,7 @@ const brand_route_1 = require("../modules/Brand/brand.route");
 const category_route_1 = require("../modules/Category/category.route");
 const product_route_1 = require("../modules/Product/product.route");
 const order_route_1 = require("../modules/Order/order.route");
+const reviews_route_1 = require("../modules/Reviews/reviews.route");
 const router = express_1.default.Router();
 const moduleRoutes = [
     {
@@ -35,6 +36,10 @@ const moduleRoutes = [
     {
         path: "/order",
         routes: order_route_1.OrderRoutes
+    },
+    {
+        path: "/review",
+        routes: reviews_route_1.ReviewsRoutes
     }
 ];
 moduleRoutes.forEach(({ path, routes }) => {
