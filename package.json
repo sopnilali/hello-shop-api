@@ -41,6 +41,7 @@
     "nodemailer": "^7.0.3",
     "sslcommerz-lts": "^1.1.0",
     "ts-node-dev": "^2.0.0",
+    "vercel": "^41.7.6",
     "zod": "^3.24.4"
   }
 }
