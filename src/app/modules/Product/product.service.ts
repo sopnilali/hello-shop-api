@@ -22,7 +22,7 @@ const getAllProducts = async (options: IOptions = {}) => {
         limit: options.limit ? Number(options.limit) : undefined,
         minPrice: options.minPrice ? Number(options.minPrice) : undefined,
         maxPrice: options.maxPrice ? Number(options.maxPrice) : undefined,
-        brandId: options.brandId ? String(options.brandId) : undefined // Ensure brandId is a string
+        brandId: options.brandId ? String(options.brandId) : undefined
     };
 
     const { page, limit, skip, sortBy, sortOrder } = paginationHelper.calculatePagination(processedOptions);
@@ -82,6 +82,147 @@ const getAllProducts = async (options: IOptions = {}) => {
         whereConditions.brandId = brandId;
     }
 
+    let orderBy: any = { createdAt: "desc" }; // default
+
+    if (sortBy) {
+        const sortOrderValue = sortOrder?.toLowerCase() === "asc" ? "asc" : "desc";
+
+        switch (sortBy) {
+            case "rating":
+                // Sort by average rating from reviews
+                const products = await prisma.product.findMany({
+                    where: whereConditions,
+                    include: {
+                        category: true,
+                        brand: true,
+                        seller: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                phoneNumber: true,
+                                address: true
+                            }
+                        },
+                        reviews: {
+                            select: {
+                                rating: true
+                            }
+                        }
+                    }
+                });
+
+                const productsWithAvgRating = products.map((product) => {
+                    const reviews = product.reviews as { rating: number }[];
+                    const average = reviews.length > 0
+                        ? reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
+                        : 0;
+                    
+                    return {
+                        ...product,
+                        averageRating: parseFloat(average.toFixed(1)),
+                        totalReviews: reviews.length
+                    };
+                });
+
+                productsWithAvgRating.sort((a, b) =>
+                    sortOrderValue === "asc"
+                        ? a.averageRating - b.averageRating
+                        : b.averageRating - a.averageRating
+                );
+
+                return {
+                    meta: {
+                        page,
+                        limit,
+                        total: products.length
+                    },
+                    data: productsWithAvgRating.slice(skip, skip + limit)
+                };
+
+            case "reviews":
+                // Sort by number of reviews
+                const productsWithReviewCount = await prisma.product.findMany({
+                    where: whereConditions,
+                    include: {
+                        category: true,
+                        brand: true,
+                        seller: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                phoneNumber: true,
+                                address: true
+                            }
+                        },
+                        reviews: {
+                            select: {
+                                rating: true
+                            }
+                        }
+                    },
+                    orderBy: {
+                        reviews: {
+                            _count: sortOrderValue
+                        }
+                    },
+                    skip,
+                    take: limit
+                });
+
+                const total = await prisma.product.count({
+                    where: whereConditions
+                });
+
+                const productsWithReviewCountAndRating = productsWithReviewCount.map((product) => {
+                    const reviews = product.reviews as { rating: number }[];
+                    const averageRating = reviews.length > 0
+                        ? reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
+                        : 0;
+                    
+                    return {
+                        ...product,
+                        averageRating: Number(averageRating.toFixed(1)),
+                        totalReviews: reviews.length
+                    };
+                });
+
+                return {
+                    meta: {
+                        page,
+                        limit,
+                        total
+                    },
+                    data: productsWithReviewCountAndRating
+                };
+
+            case "latest":
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(endDate.getDate() - 7);
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setHours(23, 59, 59, 999);
+
+                whereConditions.createdAt = {
+                    gte: startDate,
+                    lte: endDate
+                };
+
+                orderBy = { createdAt: sortOrderValue };
+                break;
+
+            case "name":
+                orderBy = { name: sortOrderValue };
+                break;
+
+            case "price":
+                orderBy = { price: sortOrderValue };
+                break;
+        }
+    }
+
+    // Default query for other cases
     const result = await prisma.product.findMany({
         where: whereConditions,
         include: {
@@ -110,17 +251,25 @@ const getAllProducts = async (options: IOptions = {}) => {
                     }
                 }
             }
-
         },
         skip,
         take: limit,
-        orderBy: {
-            [sortBy]: sortOrder
-        }
+        orderBy
     });
 
     const total = await prisma.product.count({
         where: whereConditions
+    });
+
+    const productsWithAvgRating = result.map((product) => {
+        const reviews = product.reviews as { rating: number }[];
+        return {
+            ...product,
+            averageRating: reviews.length > 0
+                ? parseFloat((reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length).toFixed(1))
+                : 0,
+            totalReviews: reviews.length
+        };
     });
 
     return {
@@ -129,7 +278,7 @@ const getAllProducts = async (options: IOptions = {}) => {
             limit,
             total
         },
-        data: result
+        data: productsWithAvgRating
     };
 };
 

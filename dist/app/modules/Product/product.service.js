@@ -26,8 +26,7 @@ const createProduct = (req) => __awaiter(void 0, void 0, void 0, function* () {
 });
 const getAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, function* (options = {}) {
     // Convert query parameters to appropriate types
-    const processedOptions = Object.assign(Object.assign({}, options), { page: options.page ? Number(options.page) : undefined, limit: options.limit ? Number(options.limit) : undefined, minPrice: options.minPrice ? Number(options.minPrice) : undefined, maxPrice: options.maxPrice ? Number(options.maxPrice) : undefined, brandId: options.brandId ? String(options.brandId) : undefined // Ensure brandId is a string
-     });
+    const processedOptions = Object.assign(Object.assign({}, options), { page: options.page ? Number(options.page) : undefined, limit: options.limit ? Number(options.limit) : undefined, minPrice: options.minPrice ? Number(options.minPrice) : undefined, maxPrice: options.maxPrice ? Number(options.maxPrice) : undefined, brandId: options.brandId ? String(options.brandId) : undefined });
     const { page, limit, skip, sortBy, sortOrder } = paginationHelper_1.paginationHelper.calculatePagination(processedOptions);
     // Extract filter conditions
     const { searchTerm, minPrice, maxPrice, categoryId, brandId } = processedOptions;
@@ -71,6 +70,120 @@ const getAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, fun
     if (brandId) {
         whereConditions.brandId = brandId;
     }
+    let orderBy = { createdAt: "desc" }; // default
+    if (sortBy) {
+        const sortOrderValue = (sortOrder === null || sortOrder === void 0 ? void 0 : sortOrder.toLowerCase()) === "asc" ? "asc" : "desc";
+        switch (sortBy) {
+            case "rating":
+                // Sort by average rating from reviews
+                const products = yield prisma_1.default.product.findMany({
+                    where: whereConditions,
+                    include: {
+                        category: true,
+                        brand: true,
+                        seller: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                phoneNumber: true,
+                                address: true
+                            }
+                        },
+                        reviews: {
+                            select: {
+                                rating: true
+                            }
+                        }
+                    }
+                });
+                const productsWithAvgRating = products.map((product) => {
+                    const reviews = product.reviews;
+                    const average = reviews.length > 0
+                        ? reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
+                        : 0;
+                    return Object.assign(Object.assign({}, product), { averageRating: parseFloat(average.toFixed(1)), totalReviews: reviews.length });
+                });
+                productsWithAvgRating.sort((a, b) => sortOrderValue === "asc"
+                    ? a.averageRating - b.averageRating
+                    : b.averageRating - a.averageRating);
+                return {
+                    meta: {
+                        page,
+                        limit,
+                        total: products.length
+                    },
+                    data: productsWithAvgRating.slice(skip, skip + limit)
+                };
+            case "reviews":
+                // Sort by number of reviews
+                const productsWithReviewCount = yield prisma_1.default.product.findMany({
+                    where: whereConditions,
+                    include: {
+                        category: true,
+                        brand: true,
+                        seller: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                phoneNumber: true,
+                                address: true
+                            }
+                        },
+                        reviews: {
+                            select: {
+                                rating: true
+                            }
+                        }
+                    },
+                    orderBy: {
+                        reviews: {
+                            _count: sortOrderValue
+                        }
+                    },
+                    skip,
+                    take: limit
+                });
+                const total = yield prisma_1.default.product.count({
+                    where: whereConditions
+                });
+                const productsWithReviewCountAndRating = productsWithReviewCount.map((product) => {
+                    const reviews = product.reviews;
+                    const averageRating = reviews.length > 0
+                        ? reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
+                        : 0;
+                    return Object.assign(Object.assign({}, product), { averageRating: Number(averageRating.toFixed(1)), totalReviews: reviews.length });
+                });
+                return {
+                    meta: {
+                        page,
+                        limit,
+                        total
+                    },
+                    data: productsWithReviewCountAndRating
+                };
+            case "latest":
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(endDate.getDate() - 7);
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setHours(23, 59, 59, 999);
+                whereConditions.createdAt = {
+                    gte: startDate,
+                    lte: endDate
+                };
+                orderBy = { createdAt: sortOrderValue };
+                break;
+            case "name":
+                orderBy = { name: sortOrderValue };
+                break;
+            case "price":
+                orderBy = { price: sortOrderValue };
+                break;
+        }
+    }
+    // Default query for other cases
     const result = yield prisma_1.default.product.findMany({
         where: whereConditions,
         include: {
@@ -102,12 +215,16 @@ const getAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, fun
         },
         skip,
         take: limit,
-        orderBy: {
-            [sortBy]: sortOrder
-        }
+        orderBy
     });
     const total = yield prisma_1.default.product.count({
         where: whereConditions
+    });
+    const productsWithAvgRating = result.map((product) => {
+        const reviews = product.reviews;
+        return Object.assign(Object.assign({}, product), { averageRating: reviews.length > 0
+                ? parseFloat((reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length).toFixed(1))
+                : 0, totalReviews: reviews.length });
     });
     return {
         meta: {
@@ -115,7 +232,7 @@ const getAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, fun
             limit,
             total
         },
-        data: result
+        data: productsWithAvgRating
     };
 });
 const getSingleProduct = (id) => __awaiter(void 0, void 0, void 0, function* () {
