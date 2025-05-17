@@ -11,7 +11,7 @@ const router = express.Router();
 router.post(
     '/create-brand',
     auth(UserRole.ADMIN, UserRole.SELLER),
-    FileUploader.upload.array('file'),
+    FileUploader.upload.single('file'),
     (req: Request, res: Response, next: NextFunction)=> {
        req.body = BrandValidation.createBrandValidation.parse(JSON.parse(req.body.data))
         return BrandController.createBrand(req, res, next)

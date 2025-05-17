@@ -21,6 +21,7 @@ const updateUserValidationSchema = zod_1.z.object({
     phoneNumber: zod_1.z.string().optional(),
     profilePhoto: zod_1.z.string().optional(),
     address: zod_1.z.string().optional(),
+    city: zod_1.z.string().optional(),
     role: zod_1.z.enum([client_1.UserRole.ADMIN, client_1.UserRole.CUSTOMER, client_1.UserRole.SELLER]).optional(),
     status: zod_1.z.enum([client_1.UserStatus.ACTIVE, client_1.UserStatus.BLOCKED]).optional(),
 });

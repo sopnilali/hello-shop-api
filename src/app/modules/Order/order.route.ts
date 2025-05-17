@@ -31,7 +31,7 @@ router.get(
 
 router.patch(
     '/:id/status',
-    auth(UserRole.ADMIN),
+    auth(UserRole.ADMIN, UserRole.SELLER),
     OrderController.updateOrderStatus
 );
 

@@ -8,6 +8,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -18,6 +29,8 @@ const client_1 = require("@prisma/client");
 const AppError_1 = __importDefault(require("../../errors/AppError"));
 const http_status_1 = __importDefault(require("http-status"));
 const emailService_1 = require("../../utils/emailService");
+const paginationHelper_1 = require("../../helper/paginationHelper");
+const order_constant_1 = require("./order.constant");
 const createOrder = (user, data) => __awaiter(void 0, void 0, void 0, function* () {
     // Validate required fields
     if (!data.address || !data.city || !data.phoneNumber || !data.paymentMethod || !data.items || !data.total) {
@@ -106,21 +119,63 @@ const createOrder = (user, data) => __awaiter(void 0, void 0, void 0, function* 
     }
     return order;
 });
-const getAllOrders = () => __awaiter(void 0, void 0, void 0, function* () {
-    const orders = yield prisma_1.default.order.findMany({
-        include: {
-            items: {
-                include: {
-                    product: true
+const getAllOrders = (params, options) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page, limit, skip } = paginationHelper_1.paginationHelper.calculatePagination(options);
+    const { searchTerm } = params, filterData = __rest(params, ["searchTerm"]);
+    const andCondition = [];
+    if (params.searchTerm) {
+        andCondition.push({
+            OR: order_constant_1.orderSearchAbleFields.map(filed => ({
+                [filed]: {
+                    contains: params.searchTerm,
+                    mode: 'insensitive'
                 }
-            },
-            user: true
-        },
-        orderBy: {
+            }))
+        });
+    }
+    if (Object.keys(filterData).length > 0) {
+        andCondition.push({
+            AND: Object.keys(filterData).map(key => ({
+                [key]: {
+                    equals: filterData[key]
+                }
+            }))
+        });
+    }
+    const whereConditons = andCondition.length > 0 ? { AND: andCondition } : {};
+    const result = yield prisma_1.default.order.findMany({
+        where: whereConditons,
+        skip,
+        take: limit,
+        orderBy: options.sortBy && options.sortOrder ? {
+            [options.sortBy]: options.sortOrder
+        } : {
             createdAt: 'desc'
+        },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            paymentMethod: true,
+            total: true,
+            transactionId: true,
+            phoneNumber: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true
         }
     });
-    return orders;
+    const total = yield prisma_1.default.order.count({
+        where: whereConditons,
+    });
+    return {
+        meta: {
+            page,
+            limit,
+            total
+        },
+        data: result
+    };
 });
 const getOrderById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     const order = yield prisma_1.default.order.findUnique({

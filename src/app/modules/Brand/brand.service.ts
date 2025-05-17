@@ -2,16 +2,14 @@ import { FileUploader } from "../../helper/fileUploader";
 import prisma from "../../utils/prisma";
 import { IBrand } from "./brand.interface";
 
-
 const createBrand = async (req: any) => {
-
-    const file = req.file
+    const file = req.file;
     if (file) {
         const results = await FileUploader.uploadToCloudinary(file);
         req.body.logo = results?.secure_url;
     }
     const result = await prisma.brand.create({
-        data: req.body as IBrand
+        data: req.body
     });
     return result;
 }

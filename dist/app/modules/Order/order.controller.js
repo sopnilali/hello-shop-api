@@ -17,6 +17,8 @@ const order_service_1 = require("./order.service");
 const catchAsync_1 = require("../../helper/catchAsync");
 const sendResponse_1 = __importDefault(require("../../helper/sendResponse"));
 const http_status_1 = __importDefault(require("http-status"));
+const pick_1 = __importDefault(require("../../utils/pick"));
+const order_constant_1 = require("./order.constant");
 const createOrder = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield order_service_1.OrderService.createOrder(req.user, req.body);
     (0, sendResponse_1.default)(res, {
@@ -27,7 +29,9 @@ const createOrder = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0,
     });
 }));
 const getAllOrders = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield order_service_1.OrderService.getAllOrders();
+    const filters = (0, pick_1.default)(req.query, order_constant_1.orderFilterableFields);
+    const options = (0, pick_1.default)(req.query, ['limit', 'page', 'sortBy', 'sortOrder']);
+    const result = yield order_service_1.OrderService.getAllOrders(filters, options);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,

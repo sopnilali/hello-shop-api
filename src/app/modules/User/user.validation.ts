@@ -21,6 +21,7 @@ const updateUserValidationSchema =  z.object({
         phoneNumber: z.string().optional(),
         profilePhoto: z.string().optional(),
         address: z.string().optional(),
+        city: z.string().optional(),
         role: z.enum([UserRole.ADMIN, UserRole.CUSTOMER, UserRole.SELLER]).optional(),
         status: z.enum([UserStatus.ACTIVE, UserStatus.BLOCKED]).optional(),
     })

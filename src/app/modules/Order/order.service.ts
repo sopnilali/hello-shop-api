@@ -1,10 +1,13 @@
 import prisma from '../../utils/prisma';
 import { IOrderCreate } from './order.interface';
-import { OrderStatus, PaymentMethod } from '@prisma/client';
+import { OrderStatus, PaymentMethod, Prisma } from '@prisma/client';
 import AppError from '../../errors/AppError';
 import httpStatus from 'http-status';
 import { sendOrderConfirmationEmail } from '../../utils/emailService';
 import { IUser } from '../User/user.interface';
+import { paginationHelper } from '../../helper/paginationHelper';
+import { IPaginationOptions } from '../../interface/pagination.type';
+import { orderSearchAbleFields } from './order.constant';
 
 const createOrder = async (user: any, data: IOrderCreate) => {
     // Validate required fields
@@ -106,21 +109,71 @@ const createOrder = async (user: any, data: IOrderCreate) => {
     return order;
 };
 
-const getAllOrders = async () => {
-    const orders = await prisma.order.findMany({
-        include: {
-            items: {
-                include: {
-                    product: true
+const getAllOrders = async (params: any, options: IPaginationOptions) => {
+        const { page, limit, skip } = paginationHelper.calculatePagination(options)
+    const { searchTerm, ...filterData } = params
+
+    const andCondition: Prisma.OrderWhereInput[] = [];
+
+    if (params.searchTerm) {
+        andCondition.push({
+            OR: orderSearchAbleFields.map(filed => ({
+                [filed]: {
+                    contains: params.searchTerm,
+                    mode: 'insensitive'
                 }
-            },
-            user: true
-        },
-        orderBy: {
+            }))
+        })
+    }
+    if (Object.keys(filterData).length > 0) {
+        andCondition.push({
+            AND: Object.keys(filterData).map(key => ({
+                [key]: {
+                    equals: (filterData as any)[key]
+                }
+            }))
+        })
+    }
+
+    const whereConditons: Prisma.OrderWhereInput = andCondition.length > 0 ? { AND: andCondition } : {}
+
+    const result = await prisma.order.findMany({
+        where: whereConditons,
+        skip,
+        take: limit,
+        orderBy: options.sortBy && options.sortOrder ? {
+            [options.sortBy]: options.sortOrder
+        } : {
             createdAt: 'desc'
+        },
+        
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            paymentMethod: true,
+            total: true,
+            transactionId: true,
+            phoneNumber: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true
         }
-    });
-    return orders;
+
+    })
+    const total = await prisma.order.count({
+        where: whereConditons,
+    })
+
+    return {
+        meta: {
+            page,
+            limit,
+            total
+        },
+        data: result
+    }
+
 };
 
 const getOrderById = async (id: string) => {

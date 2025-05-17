@@ -22,6 +22,7 @@ model User {
   phoneNumber        String?
   profilePhoto       String?
   address            String?
+  city               String?
   role               UserRole   @default(CUSTOMER)
   needPasswordChange Boolean    @default(true)
   status             UserStatus @default(ACTIVE)

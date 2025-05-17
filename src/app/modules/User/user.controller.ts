@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import { UserService } from "./user.service";
 import { catchAsync } from "../../helper/catchAsync";
 import sendResponse from "../../helper/sendResponse";
+import pick from "../../utils/pick";
+import { userFilterableFields } from "./user.constant";
+import status from "http-status";
 
 
 const createUser = catchAsync(async (req: Request, res: Response) => {
@@ -15,12 +18,16 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
 })
 
 const getAllUser = catchAsync(async (req: Request, res: Response) => {
-    const result = await UserService.getAllUser();
+ const filters = pick(req.query, userFilterableFields);
+    const options = pick(req.query, ['limit', 'page', 'sortBy', 'sortOrder'])
+
+    const result = await UserService.getAllUser(filters, options)
     sendResponse(res, {
+        statusCode: status.OK,
         success: true,
-        message: "User retrieved successfully",
-        statusCode: 200,
-        data: result,
+        message: "Users data fetched!",
+        meta: result.meta,
+        data: result.data
     })
 })
 const getSingleUser = catchAsync(async (req: Request, res: Response) => {

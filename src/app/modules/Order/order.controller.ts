@@ -3,6 +3,8 @@ import { OrderService } from './order.service';
 import { catchAsync } from '../../helper/catchAsync';
 import sendResponse from '../../helper/sendResponse';
 import httpStatus from 'http-status';
+import pick from '../../utils/pick';
+import { orderFilterableFields } from './order.constant';
 
 const createOrder = catchAsync(async (req: Request, res: Response) => {
     const result = await OrderService.createOrder(req.user, req.body);
@@ -15,7 +17,11 @@ const createOrder = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllOrders = catchAsync(async (req: Request, res: Response) => {
-    const result = await OrderService.getAllOrders();
+
+     const filters = pick(req.query, orderFilterableFields);
+    const options = pick(req.query, ['limit', 'page', 'sortBy', 'sortOrder'])
+
+    const result = await OrderService.getAllOrders(filters, options);
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
