@@ -1,10 +1,10 @@
-
 import status from "http-status";
 import AppError from "../../errors/AppError";
 import { paginationHelper } from "../../helper/paginationHelper";
 import { IOptions } from "../../interface/options.type";
 import prisma from "../../utils/prisma";
 import { IProduct } from "./product.interface";
+import { number } from "zod";
 
 const createProduct = async (req: any) => {
     req.body.sellerId = req.user.id;
@@ -250,6 +250,16 @@ const getAllProducts = async (options: IOptions = {}) => {
                         }
                     }
                 }
+            },
+            orderItems: {
+                select: {
+                    quantity: true
+                }
+            },
+            _count: {
+                select: {
+                    orderItems: true
+                }
             }
         },
         skip,
@@ -316,6 +326,11 @@ const getSingleProduct = async (id: string) => {
                     email: true,
                     phoneNumber: true,
                     address: true
+                }
+            },
+            orderItems: {
+                select: {
+                    quantity: true
                 }
             }
         }

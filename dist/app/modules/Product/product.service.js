@@ -211,6 +211,16 @@ const getAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, fun
                         }
                     }
                 }
+            },
+            orderItems: {
+                select: {
+                    quantity: true
+                }
+            },
+            _count: {
+                select: {
+                    orderItems: true
+                }
             }
         },
         skip,
@@ -268,6 +278,11 @@ const getSingleProduct = (id) => __awaiter(void 0, void 0, void 0, function* () 
                     email: true,
                     phoneNumber: true,
                     address: true
+                }
+            },
+            orderItems: {
+                select: {
+                    quantity: true
                 }
             }
         }
