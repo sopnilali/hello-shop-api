@@ -16,9 +16,10 @@ export interface IOrderCreate {
     city: string;
     phoneNumber: string;
     paymentMethod: PaymentMethod;
-    items: IOrderItemCreate[];
+    transactionId?: string;
+    items: IOrderItem[];
     total: number;
-    transactionId: string;
+    couponCode?: string;
 }
 
 export interface IOrder {

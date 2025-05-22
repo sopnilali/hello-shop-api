@@ -198,6 +198,22 @@ const getAllProducts = (...args_1) => __awaiter(void 0, [...args_1], void 0, fun
                     address: true
                 }
             },
+            shop: {
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    owner: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            phoneNumber: true,
+                            address: true
+                        }
+                    }
+                }
+            },
             reviews: {
                 include: {
                     user: {
@@ -254,6 +270,31 @@ const getSingleProduct = (id) => __awaiter(void 0, void 0, void 0, function* () 
         include: {
             category: true,
             brand: true,
+            shop: {
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    owner: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            phoneNumber: true,
+                            address: true
+                        }
+                    }
+                }
+            },
+            seller: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phoneNumber: true,
+                    address: true
+                }
+            },
             reviews: {
                 include: {
                     user: {
@@ -269,15 +310,6 @@ const getSingleProduct = (id) => __awaiter(void 0, void 0, void 0, function* () 
                     _count: {
                         select: { like: true }
                     }
-                }
-            },
-            seller: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    phoneNumber: true,
-                    address: true
                 }
             },
             orderItems: {

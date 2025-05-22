@@ -237,6 +237,22 @@ const getAllProducts = async (options: IOptions = {}) => {
                     address: true
                 }
             },
+            shop: {
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    owner: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            phoneNumber: true,
+                            address: true
+                        }
+                    }
+                }
+            },
             reviews: {
                 include: {
                     user: {
@@ -302,6 +318,31 @@ const getSingleProduct = async (id: string) => {
         include: {
             category: true,
             brand: true,
+            shop: {
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    owner: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            phoneNumber: true,
+                            address: true
+                        }
+                    }
+                }
+            },
+            seller: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phoneNumber: true,
+                    address: true
+                }
+            },
             reviews: {
                 include: {
                     user: {
@@ -317,15 +358,6 @@ const getSingleProduct = async (id: string) => {
                     _count: {
                         select: { like: true }
                     }
-                }
-            },
-            seller: {
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    phoneNumber: true,
-                    address: true
                 }
             },
             orderItems: {

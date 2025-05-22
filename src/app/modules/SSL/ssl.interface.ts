@@ -9,4 +9,11 @@ export type IPaymentData = {
   productId: string;
   productName: string;
   productCategory: string;
+  discountPercentage: number;
+};
+
+export type IPaymentResponse = {
+  status: string;
+  message: string;
+  transactionId: string;
 };

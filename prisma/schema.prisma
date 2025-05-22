@@ -33,8 +33,23 @@ model User {
   reviews            Reviews[]
   comment            Comment[]
   like               Like[]
+  shops              Shop[]
 
   @@map("users")
+}
+
+model Shop {
+  id          String    @id @default(uuid())
+  name        String
+  description String
+  logo        String?
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id])
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("shops")
 }
 
 model Product {
@@ -51,6 +66,8 @@ model Product {
   brandId     String
   brand       Brand         @relation(fields: [brandId], references: [id])
   status      ProductStatus @default(AVAILABLE)
+  shopId      String?
+  shop        Shop?         @relation(fields: [shopId], references: [id])
   sellerId    String
   seller      User          @relation(fields: [sellerId], references: [id])
   createdAt   DateTime      @default(now())
@@ -98,6 +115,9 @@ model Order {
   transactionId String?
   status        OrderStatus   @default(PENDING)
   items         OrderItem[]
+  couponId      String?
+  coupon        Coupon?       @relation(fields: [couponId], references: [id])
+  discount      Float?        @default(0)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -198,7 +218,7 @@ enum PaymentMethod {
   BKASH
   NAGAD
   CASH_ON_DELIVERY
-  CREDIT_CARD
+  SSL_COMMERZ
 }
 
 enum OrderStatus {
@@ -207,4 +227,40 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELLED
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum CouponStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
+
+enum ShopStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model Coupon {
+  id          String       @id @default(uuid())
+  code        String       @unique
+  type        CouponType
+  value       Float
+  minPurchase Float?
+  maxDiscount Float?
+  startDate   DateTime
+  endDate     DateTime
+  status      CouponStatus @default(ACTIVE)
+  usageLimit  Int?
+  usedCount   Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orders      Order[]
+
+  @@map("coupons")
 }

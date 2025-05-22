@@ -8,6 +8,8 @@ import { IUser } from '../User/user.interface';
 import { paginationHelper } from '../../helper/paginationHelper';
 import { IPaginationOptions } from '../../interface/pagination.type';
 import { orderSearchAbleFields } from './order.constant';
+import { CouponService } from '../Coupon/coupon.service';
+import { SSLService } from '../SSL/ssl.service';
 
 const createOrder = async (user: any, data: IOrderCreate) => {
     // Validate required fields
@@ -24,7 +26,8 @@ const createOrder = async (user: any, data: IOrderCreate) => {
             id: true,
             name: true,
             price: true,
-            quantity: true
+            quantity: true,
+            categoryId: true
         }
     });
 
@@ -46,6 +49,32 @@ const createOrder = async (user: any, data: IOrderCreate) => {
         }
     }
 
+    let discount = 0;
+    let couponId = null;
+
+    // Apply coupon if provided
+    if (data.couponCode) {
+        try {
+            const couponResult = await CouponService.validateAndApplyCoupon(data.couponCode, data.total);
+            discount = couponResult.discount;
+            couponId = couponResult.coupon.id;
+        } catch (error: any) {
+            throw new AppError(httpStatus.BAD_REQUEST, error.message);
+        }
+    }
+
+    // Calculate final total after discount
+    const finalTotal = data.total - discount;
+
+    // Determine order status based on payment method and transactionId
+    let orderStatus: OrderStatus = OrderStatus.PENDING;
+    if (
+        (data.paymentMethod === PaymentMethod.BKASH || data.paymentMethod === PaymentMethod.NAGAD) &&
+        data.transactionId
+    ) {
+        orderStatus = OrderStatus.PROCESSING;
+    }
+
     // Create order with items in a transaction
     const order = await prisma.$transaction(async (tx) => {
         // Create the order
@@ -58,9 +87,11 @@ const createOrder = async (user: any, data: IOrderCreate) => {
                 city: data.city,
                 phoneNumber: data.phoneNumber,
                 paymentMethod: data.paymentMethod as PaymentMethod,
-                total: data.total,
-                transactionId: data.transactionId,
-                status: OrderStatus.PENDING,
+                total: finalTotal,
+                transactionId: data.transactionId || `ORDER_${Date.now()}`,
+                status: orderStatus,
+                couponId,
+                discount,
                 items: {
                     create: data.items.map(item => {
                         const product = products.find(p => p.id === item.productId)!;
@@ -77,7 +108,8 @@ const createOrder = async (user: any, data: IOrderCreate) => {
                     include: {
                         product: true
                     }
-                }
+                },
+                coupon: true
             }
         });
 
@@ -95,17 +127,64 @@ const createOrder = async (user: any, data: IOrderCreate) => {
             });
         }
 
-        return newOrder;
+        // Update coupon usage count if coupon was applied
+        if (couponId) {
+            await tx.coupon.update({
+                where: { id: couponId },
+                data: {
+                    usedCount: {
+                        increment: 1
+                    },
+                    usageLimit: {
+                        decrement: 1
+                    }
+                }
+            });
+        }
+
+        // If order is confirmed (created successfully), send confirmation email
+        try {
+            await sendOrderConfirmationEmail(user.email, newOrder);
+        } catch (error) {
+            console.error('Failed to send order confirmation email:', error);
+            // Don't throw error here as the order was created successfully
+        }
+
+        // Return based on payment method
+        if (data.paymentMethod === PaymentMethod.SSL_COMMERZ) {
+            const initPaymentData = {
+                amount: finalTotal,
+                transactionId: newOrder.transactionId || `ORDER_${Date.now()}`,
+                name: user.name,
+                email: user.email,
+                userId: user.id,
+                productId: newOrder.items[0].productId,
+                productName: newOrder.items[0].product.name,
+                productCategory: newOrder.items[0].product.categoryId,
+                discountPercentage: discount
+            };
+
+            try {
+                const paymentUrl = await SSLService.initPayment(initPaymentData);
+                // Return order and paymentUrl for SSL_COMMERZ
+                return {
+                    order: newOrder,
+                    paymentUrl
+                };
+            } catch (error: any) {
+                throw new AppError(
+                    httpStatus.BAD_REQUEST,
+                    error.message || 'Failed to initialize payment'
+                );
+            }
+        } else {
+            // For other payment methods, just return the order
+            return {
+                order: newOrder
+            };
+        }
     });
-
-    // Send order confirmation email
-    try {
-        await sendOrderConfirmationEmail(user.email, order);
-    } catch (error) {
-        console.error('Failed to send order confirmation email:', error);
-        // Don't throw error here as the order was created successfully
-    }
-
+    
     return order;
 };
 
@@ -156,6 +235,15 @@ const getAllOrders = async (params: any, options: IPaginationOptions) => {
             transactionId: true,
             phoneNumber: true,
             status: true,
+            items: {
+                include: {
+                    product: {
+                        include: {
+                            shop: true
+                        }
+                    }
+                }
+            },
             createdAt: true,
             updatedAt: true
         }
@@ -218,9 +306,28 @@ const getOrdersByUserId = async (user: IUser) => {
         include: {
             items: {
                 include: {
-                    product: true
+                    product: {
+                        include : {
+                            shop: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    description: true,
+                                    logo: true,
+                                    owner: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            email: true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             },
+            
             user: {
                 select: {
                     id: true,

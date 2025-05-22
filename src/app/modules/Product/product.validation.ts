@@ -9,6 +9,7 @@ const createProductValidation = z.object({
     quantity: z.number({ required_error: "Quantity is required" }),
     categoryId: z.string({ required_error: "Category ID is required" }),
     brandId: z.string({ required_error: "Brand ID is required" }),
+    shopId: z.string({ required_error: "Shop ID is required" }),
 });
 
 const updateProductValidation = z.object({
@@ -22,6 +23,7 @@ const updateProductValidation = z.object({
     condition: z.nativeEnum(Conditions).optional(),
     brandId: z.string({ required_error: "Brand ID is required" }).optional(),
     status: z.nativeEnum(ProductStatus).optional(),
+    shopId: z.string({ required_error: "Shop ID is required" }).optional(),
 });
 
 export const ProductValidation = {

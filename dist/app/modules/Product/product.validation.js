@@ -11,6 +11,7 @@ const createProductValidation = zod_1.z.object({
     quantity: zod_1.z.number({ required_error: "Quantity is required" }),
     categoryId: zod_1.z.string({ required_error: "Category ID is required" }),
     brandId: zod_1.z.string({ required_error: "Brand ID is required" }),
+    shopId: zod_1.z.string({ required_error: "Shop ID is required" }),
 });
 const updateProductValidation = zod_1.z.object({
     name: zod_1.z.string({ required_error: "Name is required" }).optional(),
@@ -23,6 +24,7 @@ const updateProductValidation = zod_1.z.object({
     condition: zod_1.z.nativeEnum(client_1.Conditions).optional(),
     brandId: zod_1.z.string({ required_error: "Brand ID is required" }).optional(),
     status: zod_1.z.nativeEnum(client_1.ProductStatus).optional(),
+    shopId: zod_1.z.string({ required_error: "Shop ID is required" }).optional(),
 });
 exports.ProductValidation = {
     createProductValidation,
