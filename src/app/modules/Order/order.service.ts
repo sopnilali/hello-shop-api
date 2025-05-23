@@ -1,6 +1,6 @@
 import prisma from '../../utils/prisma';
 import { IOrderCreate } from './order.interface';
-import { OrderStatus, PaymentMethod, Prisma } from '@prisma/client';
+import { OrderStatus, PaymentMethod, Prisma, Conditions } from '@prisma/client';
 import AppError from '../../errors/AppError';
 import httpStatus from 'http-status';
 import { sendOrderConfirmationEmail } from '../../utils/emailService';
@@ -10,6 +10,24 @@ import { IPaginationOptions } from '../../interface/pagination.type';
 import { orderSearchAbleFields } from './order.constant';
 import { CouponService } from '../Coupon/coupon.service';
 import { SSLService } from '../SSL/ssl.service';
+
+type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
+type DiscountStatus = 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
+
+interface ProductWithDiscount {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    categoryId: string;
+    discount?: {
+        type: DiscountType;
+        value: number;
+        status: DiscountStatus;
+        startDate: Date;
+        endDate: Date;
+    } | null;
+}
 
 const createOrder = async (user: any, data: IOrderCreate) => {
     // Validate required fields
@@ -22,14 +40,10 @@ const createOrder = async (user: any, data: IOrderCreate) => {
         where: {
             id: { in: data.items.map(item => item.productId) }
         },
-        select: {
-            id: true,
-            name: true,
-            price: true,
-            quantity: true,
-            categoryId: true
+        include: {
+            discount: true
         }
-    });
+    }) as ProductWithDiscount[];
 
     // Check if all products exist
     if (products.length !== data.items.length) {
@@ -40,7 +54,6 @@ const createOrder = async (user: any, data: IOrderCreate) => {
     for (const item of data.items) {
         const product = products.find(p => p.id === item.productId);
         if (!product) continue;
-        
         if (product.quantity < item.quantity) {
             throw new AppError(
                 httpStatus.BAD_REQUEST,
@@ -49,22 +62,44 @@ const createOrder = async (user: any, data: IOrderCreate) => {
         }
     }
 
-    let discount = 0;
+    let totalDiscount = 0;
     let couponId = null;
+
+    // Calculate product discounts
+    for (const item of data.items) {
+        const product = products.find(p => p.id === item.productId);
+        if (!product) continue;
+
+        if (product.discount && product.discount.status === 'ACTIVE' && 
+            new Date() >= product.discount.startDate && 
+            new Date() <= product.discount.endDate) {
+            
+            const itemTotal = product.price * item.quantity;
+            let itemDiscount = 0;
+
+            if (product.discount.type === 'PERCENTAGE') {
+                itemDiscount = (itemTotal * product.discount.value) / 100;
+            } else {
+                itemDiscount = Math.min(product.discount.value * item.quantity, itemTotal);
+            }
+
+            totalDiscount += itemDiscount;
+        }
+    }
 
     // Apply coupon if provided
     if (data.couponCode) {
         try {
-            const couponResult = await CouponService.validateAndApplyCoupon(data.couponCode, data.total);
-            discount = couponResult.discount;
+            const couponResult = await CouponService.validateAndApplyCoupon(data.couponCode, data.total - totalDiscount);
+            totalDiscount += couponResult.discount;
             couponId = couponResult.coupon.id;
         } catch (error: any) {
             throw new AppError(httpStatus.BAD_REQUEST, error.message);
         }
     }
 
-    // Calculate final total after discount
-    const finalTotal = data.total - discount;
+    // Calculate final total after all discounts
+    const finalTotal = data.total - totalDiscount;
 
     // Determine order status based on payment method and transactionId
     let orderStatus: OrderStatus = OrderStatus.PENDING;
@@ -91,7 +126,7 @@ const createOrder = async (user: any, data: IOrderCreate) => {
                 transactionId: data.transactionId || `ORDER_${Date.now()}`,
                 status: orderStatus,
                 couponId,
-                discount,
+                discount: totalDiscount,
                 items: {
                     create: data.items.map(item => {
                         const product = products.find(p => p.id === item.productId)!;
@@ -161,7 +196,7 @@ const createOrder = async (user: any, data: IOrderCreate) => {
                 productId: newOrder.items[0].productId,
                 productName: newOrder.items[0].product.name,
                 productCategory: newOrder.items[0].product.categoryId,
-                discountPercentage: discount
+                discountPercentage: totalDiscount
             };
 
             try {

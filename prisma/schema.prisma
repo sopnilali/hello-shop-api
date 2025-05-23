@@ -71,6 +71,8 @@ model Product {
   shop        Shop?         @relation(fields: [shopId], references: [id])
   sellerId    String
   seller      User          @relation(fields: [sellerId], references: [id])
+  discount    Discount?     @relation(fields: [discountId], references: [id])
+  discountId  String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   orderItems  OrderItem[]
@@ -290,4 +292,29 @@ model Coupon {
   orders      Order[]
 
   @@map("coupons")
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+model Discount {
+  id          String       @id @default(uuid())
+  type        DiscountType
+  value       Float
+  startDate   DateTime
+  endDate     DateTime
+  status      DiscountStatus @default(ACTIVE)
+  products    Product[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("discounts")
+}
+
+enum DiscountStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
 }

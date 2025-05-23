@@ -43,12 +43,8 @@ const createOrder = (user, data) => __awaiter(void 0, void 0, void 0, function* 
         where: {
             id: { in: data.items.map(item => item.productId) }
         },
-        select: {
-            id: true,
-            name: true,
-            price: true,
-            quantity: true,
-            categoryId: true
+        include: {
+            discount: true
         }
     });
     // Check if all products exist
@@ -64,21 +60,40 @@ const createOrder = (user, data) => __awaiter(void 0, void 0, void 0, function* 
             throw new AppError_1.default(http_status_1.default.BAD_REQUEST, `Insufficient quantity for product: ${product.name}. Available: ${product.quantity}, Requested: ${item.quantity}`);
         }
     }
-    let discount = 0;
+    let totalDiscount = 0;
     let couponId = null;
+    // Calculate product discounts
+    for (const item of data.items) {
+        const product = products.find(p => p.id === item.productId);
+        if (!product)
+            continue;
+        if (product.discount && product.discount.status === 'ACTIVE' &&
+            new Date() >= product.discount.startDate &&
+            new Date() <= product.discount.endDate) {
+            const itemTotal = product.price * item.quantity;
+            let itemDiscount = 0;
+            if (product.discount.type === 'PERCENTAGE') {
+                itemDiscount = (itemTotal * product.discount.value) / 100;
+            }
+            else {
+                itemDiscount = Math.min(product.discount.value * item.quantity, itemTotal);
+            }
+            totalDiscount += itemDiscount;
+        }
+    }
     // Apply coupon if provided
     if (data.couponCode) {
         try {
-            const couponResult = yield coupon_service_1.CouponService.validateAndApplyCoupon(data.couponCode, data.total);
-            discount = couponResult.discount;
+            const couponResult = yield coupon_service_1.CouponService.validateAndApplyCoupon(data.couponCode, data.total - totalDiscount);
+            totalDiscount += couponResult.discount;
             couponId = couponResult.coupon.id;
         }
         catch (error) {
             throw new AppError_1.default(http_status_1.default.BAD_REQUEST, error.message);
         }
     }
-    // Calculate final total after discount
-    const finalTotal = data.total - discount;
+    // Calculate final total after all discounts
+    const finalTotal = data.total - totalDiscount;
     // Determine order status based on payment method and transactionId
     let orderStatus = client_1.OrderStatus.PENDING;
     if ((data.paymentMethod === client_1.PaymentMethod.BKASH || data.paymentMethod === client_1.PaymentMethod.NAGAD) &&
@@ -101,7 +116,7 @@ const createOrder = (user, data) => __awaiter(void 0, void 0, void 0, function* 
                 transactionId: data.transactionId || `ORDER_${Date.now()}`,
                 status: orderStatus,
                 couponId,
-                discount,
+                discount: totalDiscount,
                 items: {
                     create: data.items.map(item => {
                         const product = products.find(p => p.id === item.productId);
@@ -167,7 +182,7 @@ const createOrder = (user, data) => __awaiter(void 0, void 0, void 0, function* 
                 productId: newOrder.items[0].productId,
                 productName: newOrder.items[0].product.name,
                 productCategory: newOrder.items[0].product.categoryId,
-                discountPercentage: discount
+                discountPercentage: totalDiscount
             };
             try {
                 const paymentUrl = yield ssl_service_1.SSLService.initPayment(initPaymentData);

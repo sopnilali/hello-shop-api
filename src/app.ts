@@ -4,6 +4,7 @@ import cors from "cors";
 import router from './app/routes';
 import status from 'http-status';
 import globalErrorHandler from './app/middleware/globalErrorHandler';
+import { DiscountRoutes } from './app/modules/Discount/discount.route';
 
 const app = express();
 
