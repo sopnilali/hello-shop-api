@@ -112,7 +112,12 @@ const getShopById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     }
     return shop;
 });
-const updateShop = (id, data) => __awaiter(void 0, void 0, void 0, function* () {
+const updateShop = (id, req) => __awaiter(void 0, void 0, void 0, function* () {
+    const file = req.file;
+    if (file) {
+        const uploadResult = yield fileUploader_1.FileUploader.uploadToCloudinary(file);
+        req.body.logo = uploadResult === null || uploadResult === void 0 ? void 0 : uploadResult.secure_url;
+    }
     const shop = yield prisma_1.default.shop.findUnique({
         where: { id }
     });
@@ -121,7 +126,7 @@ const updateShop = (id, data) => __awaiter(void 0, void 0, void 0, function* () 
     }
     const updatedShop = yield prisma_1.default.shop.update({
         where: { id },
-        data,
+        data: req.body,
         include: {
             owner: {
                 select: {

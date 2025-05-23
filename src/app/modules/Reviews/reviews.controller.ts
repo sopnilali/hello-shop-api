@@ -2,6 +2,9 @@ import httpStatus from "http-status";
 import { catchAsync } from "../../helper/catchAsync";
 import { ReviewsService } from "./reviews.service";
 import sendResponse from "../../helper/sendResponse";
+import pick from "../../utils/pick";
+import { paginationHelper } from "../../helper/paginationHelper";
+import { reviewFilterableFields } from "./review.constant";
 
 const addReviews = catchAsync(async (req, res) => {
   const result = await ReviewsService.addReviews(req.body, req.user);
@@ -14,12 +17,15 @@ const addReviews = catchAsync(async (req, res) => {
 });
 
 const getAllReviews = catchAsync(async (req, res) => {
-  const result = await ReviewsService.getAllReviews();
+  const filters = pick(req.query, reviewFilterableFields);
+  const options = pick(req.query, ['limit', 'page', 'sortBy', 'sortOrder'])
+  const result = await ReviewsService.getAllReviews(filters, options);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "Reviews fetched successfully",
-    data: result,
+    data: result.data,
+    meta: result.meta,
   });
 });
 

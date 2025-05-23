@@ -15,16 +15,17 @@ router.post(
   ReviewsController.addReviews
 );
 
-router.get("/", ReviewsController.getAllReviews);
+router.get("/", auth(UserRole.ADMIN, UserRole.SELLER), ReviewsController.getAllReviews);
 router.get("/:productId", auth(UserRole.SELLER, UserRole.CUSTOMER, UserRole.ADMIN), ReviewsController.getAllReviewsById);
 // router.get("/:id", ReviewsController.getSingleReviews);
 
 router.patch(
   "/:id",
+  auth(UserRole.ADMIN, UserRole.SELLER, UserRole.CUSTOMER),
   validateRequest(ReviewValidations.updateReviewValidationSchema),
   ReviewsController.updateReview
 );
-router.delete("/:id", ReviewsController.deleteReview);
-router.get('/stats', ReviewsController.getReviewStats);
+router.delete("/:id", auth(UserRole.ADMIN, UserRole.SELLER), ReviewsController.deleteReview);
+router.get('/stats', auth(UserRole.ADMIN, UserRole.SELLER), ReviewsController.getReviewStats);
 
 export const ReviewsRoutes = router;

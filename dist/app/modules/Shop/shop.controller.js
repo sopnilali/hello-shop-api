@@ -49,7 +49,7 @@ const getShopById = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0,
     });
 }));
 const updateShop = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield shop_service_1.ShopService.updateShop(req.params.id, req.body);
+    const result = yield shop_service_1.ShopService.updateShop(req.params.id, req);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_1.default.OK,

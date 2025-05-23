@@ -14,6 +14,8 @@ const reviews_route_1 = require("../modules/Reviews/reviews.route");
 const coupon_route_1 = require("../modules/Coupon/coupon.route");
 const shop_route_1 = require("../modules/Shop/shop.route");
 const payment_route_1 = require("../modules/Payment/payment.route");
+const blogCategory_route_1 = require("../modules/BlogCategory/blogCategory.route");
+const blog_route_1 = require("../modules/Blog/blog.route");
 const router = express_1.default.Router();
 const moduleRoutes = [
     {
@@ -55,6 +57,14 @@ const moduleRoutes = [
     {
         path: "/payment",
         routes: payment_route_1.PaymentRoutes
+    },
+    {
+        path: "/blog-category",
+        routes: blogCategory_route_1.BlogCategoryRoutes
+    },
+    {
+        path: "/blog",
+        routes: blog_route_1.BlogRoutes
     }
 ];
 moduleRoutes.forEach(({ path, routes }) => {

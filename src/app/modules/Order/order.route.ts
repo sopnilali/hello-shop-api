@@ -35,4 +35,10 @@ router.patch(
     OrderController.updateOrderStatus
 );
 
+router.delete(
+    '/:id',
+    auth(UserRole.ADMIN, UserRole.SELLER),
+    OrderController.deleteOrder
+);
+
 export const OrderRoutes = router; 

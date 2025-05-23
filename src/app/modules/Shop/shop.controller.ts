@@ -38,7 +38,7 @@ const getShopById = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateShop = catchAsync(async (req: Request, res: Response) => {
-    const result = await ShopService.updateShop(req.params.id, req.body);
+    const result = await ShopService.updateShop(req.params.id, req);
     sendResponse(res, {
         success: true,
         statusCode: httpStatus.OK,

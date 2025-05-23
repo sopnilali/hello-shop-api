@@ -8,6 +8,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -17,6 +28,7 @@ const client_1 = require("@prisma/client");
 const prisma_1 = __importDefault(require("../../utils/prisma"));
 const AppError_1 = __importDefault(require("../../errors/AppError"));
 const http_status_1 = __importDefault(require("http-status"));
+const paginationHelper_1 = require("../../helper/paginationHelper");
 const addReviews = (payload, user) => __awaiter(void 0, void 0, void 0, function* () {
     const isUserExist = yield prisma_1.default.user.findUnique({
         where: { id: user.id },
@@ -30,8 +42,37 @@ const addReviews = (payload, user) => __awaiter(void 0, void 0, void 0, function
     });
     return result;
 });
-const getAllReviews = () => __awaiter(void 0, void 0, void 0, function* () {
+const getAllReviews = (params, options) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page, limit, skip } = paginationHelper_1.paginationHelper.calculatePagination(options);
+    const { searchTerm } = params, filterData = __rest(params, ["searchTerm"]);
+    const andCondition = [];
+    if (params.searchTerm) {
+        andCondition.push({
+            OR: [
+                { reviewText: { contains: params.searchTerm, mode: 'insensitive' } },
+                { user: { name: { contains: params.searchTerm, mode: 'insensitive' } } }
+            ]
+        });
+    }
+    if (Object.keys(filterData).length > 0) {
+        andCondition.push({
+            AND: Object.keys(filterData).map(key => ({
+                [key]: {
+                    equals: filterData[key]
+                }
+            }))
+        });
+    }
+    const whereConditons = andCondition.length > 0 ? { AND: andCondition } : {};
     const result = yield prisma_1.default.reviews.findMany({
+        where: whereConditons,
+        skip,
+        take: limit,
+        orderBy: options.sortBy && options.sortOrder ? {
+            [options.sortBy]: options.sortOrder
+        } : {
+            createdAt: 'desc'
+        },
         include: {
             user: {
                 select: {
@@ -45,10 +86,19 @@ const getAllReviews = () => __awaiter(void 0, void 0, void 0, function* () {
             product: true,
             comment: true,
             like: true,
-        },
-        orderBy: { createdAt: 'desc' },
+        }
     });
-    return result;
+    const total = yield prisma_1.default.reviews.count({
+        where: whereConditons,
+    });
+    return {
+        meta: {
+            page,
+            limit,
+            total
+        },
+        data: result
+    };
 });
 const getAllReviewByProductId = (productId) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield prisma_1.default.reviews.findMany({
@@ -127,7 +177,6 @@ const getReviewStats = () => __awaiter(void 0, void 0, void 0, function* () {
             }
         }
     });
-    console.log(stats);
     // Get content details for each stat
     const statsWithProduct = yield Promise.all(stats.map((stat) => __awaiter(void 0, void 0, void 0, function* () {
         const product = yield prisma_1.default.product.findUnique({

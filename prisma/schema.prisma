@@ -34,6 +34,7 @@ model User {
   comment            Comment[]
   like               Like[]
   shops              Shop[]
+  blog               Blog[]
 
   @@map("users")
 }
@@ -183,6 +184,32 @@ model Like {
   @@map("likes")
 }
 
+model Blog {
+  id         String       @id @default(uuid())
+  title      String
+  content    String
+  thumbnail  String?
+  categoryId String
+  category   BlogCategory @relation(fields: [categoryId], references: [id])
+  authorId   String
+  author     User         @relation(fields: [authorId], references: [id])
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@map("blogs")
+}
+
+model BlogCategory {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  blog        Blog[]
+
+  @@map("blog_categories")
+}
+
 enum LikeStatus {
   LIKED
   DISLIKED
@@ -257,9 +284,9 @@ model Coupon {
   endDate     DateTime
   status      CouponStatus @default(ACTIVE)
   usageLimit  Int?
-  usedCount   Int         @default(0)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  usedCount   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   orders      Order[]
 
   @@map("coupons")

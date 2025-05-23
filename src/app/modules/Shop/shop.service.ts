@@ -122,7 +122,15 @@ const getShopById = async (id: string) => {
     return shop;
 };
 
-const updateShop = async (id: string, data: any) => {
+const updateShop = async (id: string, req: any) => {
+
+    const file = req.file;
+
+    if (file) {
+        const uploadResult = await FileUploader.uploadToCloudinary(file);
+        req.body.logo = uploadResult?.secure_url;
+    }
+
     const shop = await prisma.shop.findUnique({
         where: { id }
     });
@@ -133,7 +141,7 @@ const updateShop = async (id: string, data: any) => {
 
     const updatedShop = await prisma.shop.update({
         where: { id },
-        data,
+        data: req.body,
         include: {
             owner: {
                 select: {

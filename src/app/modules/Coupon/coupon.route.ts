@@ -7,36 +7,36 @@ import { UserRole } from '@prisma/client';
 
 const router = express.Router();
 
-// Admin routes
+// Admin and Seller routes
 router.post(
     '/',
-    auth(UserRole.ADMIN),
+    auth(UserRole.ADMIN, UserRole.SELLER),
     validateRequest(CouponValidation.createCoupon),
     CouponController.createCoupon
 );
 
 router.get(
     '/',
-    auth(UserRole.ADMIN),
+    auth(UserRole.ADMIN, UserRole.SELLER),
     CouponController.getAllCoupons
 );
 
 router.get(
     '/:id',
-    auth(UserRole.ADMIN),
+    auth(UserRole.ADMIN, UserRole.SELLER),
     CouponController.getCouponById
 );
 
 router.patch(
     '/:id',
-    auth(UserRole.ADMIN),
+    auth(UserRole.ADMIN, UserRole.SELLER),
     validateRequest(CouponValidation.updateCoupon),
     CouponController.updateCoupon
 );
 
 router.delete(
     '/:id',
-    auth(UserRole.ADMIN),
+    auth(UserRole.ADMIN, UserRole.SELLER),
     CouponController.deleteCoupon
 );
 

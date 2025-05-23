@@ -344,10 +344,24 @@ const getOrdersByUserId = async (user: IUser) => {
     return orders;
 }
 
+const deleteOrder = async (id: string) => {
+    // First delete all order items
+    await prisma.orderItem.deleteMany({
+        where: { orderId: id }
+    });
+
+    // Then delete the order
+    const order = await prisma.order.delete({
+        where: { id }
+    });
+    return order;
+}
+
 export const OrderService = {
     createOrder,
     getAllOrders,
     getOrderById,
     updateOrderStatus,
-    getOrdersByUserId
+    getOrdersByUserId,
+    deleteOrder
 }; 

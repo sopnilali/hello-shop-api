@@ -329,10 +329,22 @@ const getOrdersByUserId = (user) => __awaiter(void 0, void 0, void 0, function* 
     });
     return orders;
 });
+const deleteOrder = (id) => __awaiter(void 0, void 0, void 0, function* () {
+    // First delete all order items
+    yield prisma_1.default.orderItem.deleteMany({
+        where: { orderId: id }
+    });
+    // Then delete the order
+    const order = yield prisma_1.default.order.delete({
+        where: { id }
+    });
+    return order;
+});
 exports.OrderService = {
     createOrder,
     getAllOrders,
     getOrderById,
     updateOrderStatus,
-    getOrdersByUserId
+    getOrdersByUserId,
+    deleteOrder
 };

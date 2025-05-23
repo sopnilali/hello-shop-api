@@ -17,6 +17,8 @@ const http_status_1 = __importDefault(require("http-status"));
 const catchAsync_1 = require("../../helper/catchAsync");
 const reviews_service_1 = require("./reviews.service");
 const sendResponse_1 = __importDefault(require("../../helper/sendResponse"));
+const pick_1 = __importDefault(require("../../utils/pick"));
+const review_constant_1 = require("./review.constant");
 const addReviews = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield reviews_service_1.ReviewsService.addReviews(req.body, req.user);
     (0, sendResponse_1.default)(res, {
@@ -27,12 +29,15 @@ const addReviews = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, 
     });
 }));
 const getAllReviews = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield reviews_service_1.ReviewsService.getAllReviews();
+    const filters = (0, pick_1.default)(req.query, review_constant_1.reviewFilterableFields);
+    const options = (0, pick_1.default)(req.query, ['limit', 'page', 'sortBy', 'sortOrder']);
+    const result = yield reviews_service_1.ReviewsService.getAllReviews(filters, options);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
         message: "Reviews fetched successfully",
-        data: result,
+        data: result.data,
+        meta: result.meta,
     });
 }));
 const getAllReviewsById = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
