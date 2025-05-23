@@ -6,26 +6,63 @@ import prisma from '../../utils/prisma';
 import AppError from '../../errors/AppError';
 import { IDiscountCreate, IDiscountUpdate } from './discount.interface';
 
-const createDiscount = async (data: IDiscountCreate) => {
-    // Validate dates
-    if (data.startDate >= data.endDate) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Start date must be before end date');
-    }
-
-    // Validate value based on type
-    if (data.type === DiscountType.PERCENTAGE && data.value > 100) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Percentage discount cannot exceed 100%');
-    }
-
-    const discount = await prisma.discount.create({
-        data: {
-            ...data,
-            status: data.status || DiscountStatus.ACTIVE
-        }
+const createDiscount = async (payload: {
+    type: DiscountType;
+    value: number;
+    productId: string;
+    startDate: Date;
+    endDate: Date;
+  }) => {
+    // Check if product exists
+    const product = await prisma.product.findUnique({
+      where: { id: payload.productId },
     });
-
-    return discount;
-};
+  
+    if (!product) {
+      throw new AppError(httpStatus.NOT_FOUND, "Product not found");
+    }
+  
+    // Check if product already has an active discount
+    const existingDiscount = await prisma.discount.findUnique({
+      where: { productId: payload.productId },
+    });
+  
+    if (existingDiscount) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Product already has a discount"
+      );
+    }
+  
+    // Validate value based on type
+    if (payload.type === DiscountType.PERCENTAGE && payload.value > 100) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Percentage discount cannot exceed 100%"
+      );
+    }
+  
+    // Validate dates
+    if (payload.startDate >= payload.endDate) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Start date must be before end date"
+      );
+    }
+  
+    const result = await prisma.discount.create({
+      data: {
+        type: payload.type,
+        value: payload.value,
+        startDate: payload.startDate,
+        endDate: payload.endDate,
+        status: DiscountStatus.ACTIVE,
+        productId: payload.productId
+      }
+    });
+  
+    return result;
+  };
 
 const getAllDiscounts = async (options: IPaginationOptions) => {
     const { page, limit, skip, sortBy, sortOrder } = paginationHelper.calculatePagination(options);
@@ -35,7 +72,7 @@ const getAllDiscounts = async (options: IPaginationOptions) => {
         take: limit,
         orderBy: sortBy && sortOrder ? { [sortBy]: sortOrder } : { createdAt: 'desc' },
         include: {
-            products: true
+            product: true
         }
     });
 
@@ -55,7 +92,7 @@ const getDiscountById = async (id: string) => {
     const discount = await prisma.discount.findUnique({
         where: { id },
         include: {
-            products: true
+            product: true
         }
     });
 
@@ -89,7 +126,7 @@ const updateDiscount = async (id: string, data: IDiscountUpdate) => {
         where: { id },
         data,
         include: {
-            products: true
+            product: true
         }
     });
 
@@ -112,42 +149,6 @@ const deleteDiscount = async (id: string) => {
     return null;
 };
 
-const applyDiscountToProduct = async (discountId: string, productId: string) => {
-    const [discount, product] = await Promise.all([
-        prisma.discount.findUnique({ where: { id: discountId } }),
-        prisma.product.findUnique({ where: { id: productId } })
-    ]);
-
-    if (!discount) {
-        throw new AppError(httpStatus.NOT_FOUND, 'Discount not found');
-    }
-
-    if (!product) {
-        throw new AppError(httpStatus.NOT_FOUND, 'Product not found');
-    }
-
-    // Check if discount is active and valid
-    if (discount.status !== DiscountStatus.ACTIVE) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Discount is not active');
-    }
-
-    if (new Date() > discount.endDate) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Discount has expired');
-    }
-
-    const updatedProduct = await prisma.product.update({
-        where: { id: productId },
-        data: {
-            discountId
-        },
-        include: {
-            discount: true
-        }
-    });
-
-    return updatedProduct;
-};
-
 const getActiveDiscounts = async () => {
     const now = new Date();
     const result = await prisma.discount.findMany({
@@ -161,7 +162,34 @@ const getActiveDiscounts = async () => {
             }
         },
         include: {
-            products: true
+            product: {
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    price: true,
+                    quantity: true,
+                    images: true,
+                    status: true,
+                    category: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    },
+                    brand: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    },
+                    discount: {
+                        select: {
+                            value: true
+                        }
+                    }
+                }
+            }
         },
         orderBy: {
             createdAt: "desc"
@@ -177,6 +205,5 @@ export const DiscountService = {
     getDiscountById,
     updateDiscount,
     deleteDiscount,
-    applyDiscountToProduct,
     getActiveDiscounts
 }; 

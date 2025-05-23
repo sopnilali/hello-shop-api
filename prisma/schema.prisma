@@ -71,12 +71,12 @@ model Product {
   shop        Shop?         @relation(fields: [shopId], references: [id])
   sellerId    String
   seller      User          @relation(fields: [sellerId], references: [id])
-  discount    Discount?     @relation(fields: [discountId], references: [id])
   discountId  String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   orderItems  OrderItem[]
   reviews     Reviews[]
+  discount    Discount?
 
   @@map("products")
 }
@@ -300,15 +300,16 @@ enum DiscountType {
 }
 
 model Discount {
-  id          String       @id @default(uuid())
-  type        DiscountType
-  value       Float
-  startDate   DateTime
-  endDate     DateTime
-  status      DiscountStatus @default(ACTIVE)
-  products    Product[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id        String         @id @default(uuid())
+  type      DiscountType
+  value     Float
+  startDate DateTime
+  endDate   DateTime
+  status    DiscountStatus @default(ACTIVE)
+  productId String         @unique
+  product   Product        @relation(fields: [productId], references: [id])
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   @@map("discounts")
 }

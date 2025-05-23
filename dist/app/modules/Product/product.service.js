@@ -270,6 +270,7 @@ const getSingleProduct = (id) => __awaiter(void 0, void 0, void 0, function* () 
         include: {
             category: true,
             brand: true,
+            discount: true,
             shop: {
                 select: {
                     id: true,
@@ -281,7 +282,8 @@ const getSingleProduct = (id) => __awaiter(void 0, void 0, void 0, function* () 
                             name: true,
                             email: true,
                             phoneNumber: true,
-                            address: true
+                            address: true,
+                            profilePhoto: true
                         }
                     }
                 }
@@ -292,6 +294,7 @@ const getSingleProduct = (id) => __awaiter(void 0, void 0, void 0, function* () 
                     name: true,
                     email: true,
                     phoneNumber: true,
+                    profilePhoto: true,
                     address: true
                 }
             },

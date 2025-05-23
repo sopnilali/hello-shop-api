@@ -51,14 +51,6 @@ router.delete(
     DiscountController.deleteDiscount
 );
 
-router.post(
-    '/apply',
-    auth(UserRole.ADMIN, UserRole.SELLER),
-    DiscountController.applyDiscountToProduct
-);
-
-
-
 
 
 export const DiscountRoutes = router; 

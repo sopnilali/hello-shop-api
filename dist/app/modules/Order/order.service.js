@@ -137,18 +137,19 @@ const createOrder = (user, data) => __awaiter(void 0, void 0, void 0, function* 
                 coupon: true
             }
         });
-        // Update product quantities and status
-        for (const item of data.items) {
+        // Update product quantities
+        yield Promise.all(data.items.map(item => {
             const product = products.find(p => p.id === item.productId);
-            const newQuantity = product.quantity - item.quantity;
-            yield tx.product.update({
+            return tx.product.update({
                 where: { id: item.productId },
                 data: {
-                    quantity: newQuantity,
-                    status: newQuantity === 0 ? 'SOLD' : 'AVAILABLE'
+                    quantity: {
+                        decrement: item.quantity
+                    },
+                    status: product.quantity - item.quantity === 0 ? 'SOLD' : 'AVAILABLE'
                 }
             });
-        }
+        }));
         // Update coupon usage count if coupon was applied
         if (couponId) {
             yield tx.coupon.update({
@@ -202,7 +203,9 @@ const createOrder = (user, data) => __awaiter(void 0, void 0, void 0, function* 
                 order: newOrder
             };
         }
-    }));
+    }), {
+        timeout: 10000 // Increase timeout to 10 seconds
+    });
     return order;
 });
 const getAllOrders = (params, options) => __awaiter(void 0, void 0, void 0, function* () {

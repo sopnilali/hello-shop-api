@@ -18,19 +18,40 @@ const http_status_1 = __importDefault(require("http-status"));
 const paginationHelper_1 = require("../../helper/paginationHelper");
 const prisma_1 = __importDefault(require("../../utils/prisma"));
 const AppError_1 = __importDefault(require("../../errors/AppError"));
-const createDiscount = (data) => __awaiter(void 0, void 0, void 0, function* () {
-    // Validate dates
-    if (data.startDate >= data.endDate) {
-        throw new AppError_1.default(http_status_1.default.BAD_REQUEST, 'Start date must be before end date');
+const createDiscount = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+    // Check if product exists
+    const product = yield prisma_1.default.product.findUnique({
+        where: { id: payload.productId },
+    });
+    if (!product) {
+        throw new AppError_1.default(http_status_1.default.NOT_FOUND, "Product not found");
+    }
+    // Check if product already has an active discount
+    const existingDiscount = yield prisma_1.default.discount.findUnique({
+        where: { productId: payload.productId },
+    });
+    if (existingDiscount) {
+        throw new AppError_1.default(http_status_1.default.BAD_REQUEST, "Product already has a discount");
     }
     // Validate value based on type
-    if (data.type === client_1.DiscountType.PERCENTAGE && data.value > 100) {
-        throw new AppError_1.default(http_status_1.default.BAD_REQUEST, 'Percentage discount cannot exceed 100%');
+    if (payload.type === client_1.DiscountType.PERCENTAGE && payload.value > 100) {
+        throw new AppError_1.default(http_status_1.default.BAD_REQUEST, "Percentage discount cannot exceed 100%");
     }
-    const discount = yield prisma_1.default.discount.create({
-        data: Object.assign(Object.assign({}, data), { status: data.status || client_1.DiscountStatus.ACTIVE })
+    // Validate dates
+    if (payload.startDate >= payload.endDate) {
+        throw new AppError_1.default(http_status_1.default.BAD_REQUEST, "Start date must be before end date");
+    }
+    const result = yield prisma_1.default.discount.create({
+        data: {
+            type: payload.type,
+            value: payload.value,
+            startDate: payload.startDate,
+            endDate: payload.endDate,
+            status: client_1.DiscountStatus.ACTIVE,
+            productId: payload.productId
+        }
     });
-    return discount;
+    return result;
 });
 const getAllDiscounts = (options) => __awaiter(void 0, void 0, void 0, function* () {
     const { page, limit, skip, sortBy, sortOrder } = paginationHelper_1.paginationHelper.calculatePagination(options);
@@ -39,7 +60,7 @@ const getAllDiscounts = (options) => __awaiter(void 0, void 0, void 0, function*
         take: limit,
         orderBy: sortBy && sortOrder ? { [sortBy]: sortOrder } : { createdAt: 'desc' },
         include: {
-            products: true
+            product: true
         }
     });
     const total = yield prisma_1.default.discount.count();
@@ -56,7 +77,7 @@ const getDiscountById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     const discount = yield prisma_1.default.discount.findUnique({
         where: { id },
         include: {
-            products: true
+            product: true
         }
     });
     if (!discount) {
@@ -83,7 +104,7 @@ const updateDiscount = (id, data) => __awaiter(void 0, void 0, void 0, function*
         where: { id },
         data,
         include: {
-            products: true
+            product: true
         }
     });
     return updatedDiscount;
@@ -100,35 +121,6 @@ const deleteDiscount = (id) => __awaiter(void 0, void 0, void 0, function* () {
     });
     return null;
 });
-const applyDiscountToProduct = (discountId, productId) => __awaiter(void 0, void 0, void 0, function* () {
-    const [discount, product] = yield Promise.all([
-        prisma_1.default.discount.findUnique({ where: { id: discountId } }),
-        prisma_1.default.product.findUnique({ where: { id: productId } })
-    ]);
-    if (!discount) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'Discount not found');
-    }
-    if (!product) {
-        throw new AppError_1.default(http_status_1.default.NOT_FOUND, 'Product not found');
-    }
-    // Check if discount is active and valid
-    if (discount.status !== client_1.DiscountStatus.ACTIVE) {
-        throw new AppError_1.default(http_status_1.default.BAD_REQUEST, 'Discount is not active');
-    }
-    if (new Date() > discount.endDate) {
-        throw new AppError_1.default(http_status_1.default.BAD_REQUEST, 'Discount has expired');
-    }
-    const updatedProduct = yield prisma_1.default.product.update({
-        where: { id: productId },
-        data: {
-            discountId
-        },
-        include: {
-            discount: true
-        }
-    });
-    return updatedProduct;
-});
 const getActiveDiscounts = () => __awaiter(void 0, void 0, void 0, function* () {
     const now = new Date();
     const result = yield prisma_1.default.discount.findMany({
@@ -142,7 +134,34 @@ const getActiveDiscounts = () => __awaiter(void 0, void 0, void 0, function* () 
             }
         },
         include: {
-            products: true
+            product: {
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    price: true,
+                    quantity: true,
+                    images: true,
+                    status: true,
+                    category: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    },
+                    brand: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    },
+                    discount: {
+                        select: {
+                            value: true
+                        }
+                    }
+                }
+            }
         },
         orderBy: {
             createdAt: "desc"
@@ -156,6 +175,5 @@ exports.DiscountService = {
     getDiscountById,
     updateDiscount,
     deleteDiscount,
-    applyDiscountToProduct,
     getActiveDiscounts
 };

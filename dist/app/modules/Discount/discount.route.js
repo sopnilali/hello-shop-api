@@ -17,5 +17,4 @@ router.get('/active', discount_controller_1.DiscountController.getActiveDiscount
 router.get('/:id', (0, auth_1.default)(client_1.UserRole.ADMIN, client_1.UserRole.SELLER), discount_controller_1.DiscountController.getDiscountById);
 router.patch('/:id', (0, auth_1.default)(client_1.UserRole.ADMIN, client_1.UserRole.SELLER), (0, validateRequest_1.default)(discount_validation_1.DiscountValidation.updateDiscount), discount_controller_1.DiscountController.updateDiscount);
 router.delete('/:id', (0, auth_1.default)(client_1.UserRole.ADMIN, client_1.UserRole.SELLER), discount_controller_1.DiscountController.deleteDiscount);
-router.post('/apply', (0, auth_1.default)(client_1.UserRole.ADMIN, client_1.UserRole.SELLER), discount_controller_1.DiscountController.applyDiscountToProduct);
 exports.DiscountRoutes = router;

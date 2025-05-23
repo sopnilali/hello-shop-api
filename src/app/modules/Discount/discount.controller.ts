@@ -57,16 +57,6 @@ const deleteDiscount = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
-const applyDiscountToProduct = catchAsync(async (req: Request, res: Response) => {
-    const { discountId, productId } = req.body;
-    const result = await DiscountService.applyDiscountToProduct(discountId, productId);
-    sendResponse(res, {
-        success: true,
-        statusCode: httpStatus.OK,
-        message: 'Discount applied to product successfully',
-        data: result
-    });
-});
 
 const getActiveDiscounts = catchAsync(async (req: Request, res: Response) => {
     const result = await DiscountService.getActiveDiscounts();
@@ -84,6 +74,5 @@ export const DiscountController = {
     getDiscountById,
     updateDiscount,
     deleteDiscount,
-    applyDiscountToProduct,
     getActiveDiscounts
 }; 

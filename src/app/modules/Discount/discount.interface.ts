@@ -3,6 +3,7 @@ import { DiscountType, DiscountStatus } from "@prisma/client";
 export interface IDiscountCreate {
     type: DiscountType;
     value: number;
+    productId: string;
     startDate: Date;
     endDate: Date;
     status?: DiscountStatus;

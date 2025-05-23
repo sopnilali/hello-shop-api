@@ -64,16 +64,6 @@ const deleteDiscount = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void
         message: 'Discount deleted successfully'
     });
 }));
-const applyDiscountToProduct = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { discountId, productId } = req.body;
-    const result = yield discount_service_1.DiscountService.applyDiscountToProduct(discountId, productId);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_1.default.OK,
-        message: 'Discount applied to product successfully',
-        data: result
-    });
-}));
 const getActiveDiscounts = (0, catchAsync_1.catchAsync)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield discount_service_1.DiscountService.getActiveDiscounts();
     (0, sendResponse_1.default)(res, {
@@ -89,6 +79,5 @@ exports.DiscountController = {
     getDiscountById,
     updateDiscount,
     deleteDiscount,
-    applyDiscountToProduct,
     getActiveDiscounts
 };

@@ -318,6 +318,7 @@ const getSingleProduct = async (id: string) => {
         include: {
             category: true,
             brand: true,
+            discount: true,
             shop: {
                 select: {
                     id: true,
@@ -329,7 +330,8 @@ const getSingleProduct = async (id: string) => {
                             name: true,
                             email: true,
                             phoneNumber: true,
-                            address: true
+                            address: true,
+                            profilePhoto: true
                         }
                     }
                 }
@@ -340,6 +342,7 @@ const getSingleProduct = async (id: string) => {
                     name: true,
                     email: true,
                     phoneNumber: true,
+                    profilePhoto: true,
                     address: true
                 }
             },

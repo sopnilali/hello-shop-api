@@ -76,7 +76,6 @@ const createOrder = async (user: any, data: IOrderCreate) => {
             
             const itemTotal = product.price * item.quantity;
             let itemDiscount = 0;
-
             if (product.discount.type === 'PERCENTAGE') {
                 itemDiscount = (itemTotal * product.discount.value) / 100;
             } else {
@@ -148,19 +147,19 @@ const createOrder = async (user: any, data: IOrderCreate) => {
             }
         });
 
-        // Update product quantities and status
-        for (const item of data.items) {
+        // Update product quantities
+        await Promise.all(data.items.map(item => {
             const product = products.find(p => p.id === item.productId)!;
-            const newQuantity = product.quantity - item.quantity;
-            
-            await tx.product.update({
+            return tx.product.update({
                 where: { id: item.productId },
                 data: {
-                    quantity: newQuantity,
-                    status: newQuantity === 0 ? 'SOLD' : 'AVAILABLE'
+                    quantity: {
+                        decrement: item.quantity
+                    },
+                    status: product.quantity - item.quantity === 0 ? 'SOLD' : 'AVAILABLE'
                 }
             });
-        }
+        }));
 
         // Update coupon usage count if coupon was applied
         if (couponId) {
@@ -218,6 +217,8 @@ const createOrder = async (user: any, data: IOrderCreate) => {
                 order: newOrder
             };
         }
+    }, {
+        timeout: 10000 // Increase timeout to 10 seconds
     });
     
     return order;
